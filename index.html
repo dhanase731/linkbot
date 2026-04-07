@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkBot AI Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+            background: #fff;
+            color: #0d0d0d;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: #fff;
+            border-right: 1px solid #d1d5db;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid #d1d5db;
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 10px 16px;
+            background: #fff;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .new-chat-btn:hover {
+            background: #f7f7f7;
+            border-color: #bfbfbf;
+        }
+
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .conversation-item {
+            padding: 12px 16px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #565869;
+            overflow: hidden;
+        }
+
+        .conversation-item:hover {
+            background: #f7f7f7;
+        }
+
+        .conversation-item.active {
+            background: #e5e5ea;
+            font-weight: 500;
+            color: #0d0d0d;
+        }
+
+        .conversation-item-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        .conversation-item-delete {
+            opacity: 0;
+            cursor: pointer;
+            font-size: 12px;
+            color: #999;
+            margin-left: 8px;
+        }
+
+        .conversation-item:hover .conversation-item-delete {
+            opacity: 1;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid #d1d5db;
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* Main Chat Area */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+
+        .chat-header {
+            padding: 16px;
+            border-bottom: 1px solid #d1d5db;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            color: #565869;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .messages-container.empty {
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+        }
+
+        .empty-state h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #0d0d0d;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 16px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.assistant {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: #10a37f;
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+        }
+
+        .message.assistant .message-content {
+            background: #f7f7f7;
+            color: #0d0d0d;
+            border-radius: 18px 18px 18px 4px;
+        }
+
+        .message-timestamp {
+            font-size: 11px;
+            color: #bfbfbf;
+            margin-top: 4px;
+            padding: 0 12px;
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 20px;
+            border-top: 1px solid #d1d5db;
+            background: #fff;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 12px;
+            max-width: 100%;
+        }
+
+        .input-field {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: #f7f7f7;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 12px 16px;
+            transition: all 0.2s;
+        }
+
+        .input-field:focus-within {
+            background: #fff;
+            border-color: #10a37f;
+            box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.1);
+        }
+
+        textarea {
+            flex: 1;
+            border: none;
+            background: transparent;
+            resize: none;
+            outline: none;
+            font-size: 14px;
+            font-family: inherit;
+            max-height: 100px;
+            color: #0d0d0d;
+        }
+
+        textarea::placeholder {
+            color: #bfbfbf;
+        }
+
+        .send-btn {
+            background: #10a37f;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background: #0d9970;
+        }
+
+        .send-btn:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .dot {
+            width: 4px;
+            height: 4px;
+            background: #999;
+            border-radius: 50%;
+            animation: pulse 1.4s infinite;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes pulse {
+            0%, 60%, 100% {
+                opacity: 0.3;
+            }
+            30% {
+                opacity: 1;
+            }
+        }
+
+        /* Analysis Display Layout */
+        .analysis-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        .analysis-section {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 30px;
+            align-items: start;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 20px;
+        }
+
+        .analysis-section:last-child {
+            border-bottom: none;
+        }
+
+        .analysis-heading {
+            font-weight: 600;
+            font-size: 16px;
+            color: #10a37f;
+            gap: 8px;
+            display: flex;
+            align-items: flex-start;
+            padding-top: 5px;
+        }
+
+        .analysis-icon {
+            font-size: 18px;
+            margin-right: 8px;
+        }
+
+        .analysis-content {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #333;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .analysis-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .analysis-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .analysis-list li:last-child {
+            border-bottom: none;
+        }
+
+        .analysis-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: #f8f8f8;
+            border-radius: 6px;
+            margin: 4px 0;
+            font-size: 14px;
+        }
+
+        .stat-label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: #10a37f;
+            font-size: 16px;
+        }
+
+        .summary-box {
+            background: #f0fdf4;
+            border-left: 4px solid #10a37f;
+            padding: 16px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #2d5f4f;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .message-content {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" onclick="newConversation()">+ New Chat</button>
+            </div>
+            <div class="conversations-list" id="conversationsList"></div>
+            <div class="sidebar-footer">
+                LinkBot AI Assistant v1.0
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="chat-container">
+            <div class="chat-header" id="chatHeader">Chat</div>
+            
+            <div class="messages-container" id="messagesContainer">
+                <div class="empty-state">
+                    <h1>LinkBot</h1>
+                    <p>Start a new conversation or select one from the sidebar</p>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-container">
+                    <div class="input-field">
+                        <textarea 
+                            id="messageInput" 
+                            placeholder="Send a message..."
+                            rows="1"
+                            onkeydown="handleKeydown(event)"
+                        ></textarea>
+                    </div>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+                        <span>Send</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentConversationId = null;
+        let isLoading = false;
+
+        // Auto-adjust textarea height
+        const textarea = document.getElementById('messageInput');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+            updateSendButtonState();
+        });
+
+        function updateSendButtonState() {
+            const sendBtn = document.getElementById('sendBtn');
+            const message = textarea.value.trim();
+            sendBtn.disabled = !message || isLoading;
+        }
+
+        function handleKeydown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const message = textarea.value.trim();
+            if (!message || isLoading) return;
+
+            isLoading = true;
+            updateSendButtonState();
+
+            // Add user message to UI
+            appendMessage('user', message);
+            textarea.value = '';
+            textarea.style.height = 'auto';
+
+            // Show loading indicator
+            showLoading();
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        conversation_id: currentConversationId,
+                        message: message,
+                        model: 'gpt-3.5-turbo'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentConversationId = data.conversation_id;
+                    
+                    // Update header with title
+                    document.getElementById('chatHeader').textContent = data.title;
+                    
+                    // Remove loading indicator
+                    removeLoading();
+                    
+                    // Add assistant message
+                    appendMessage('assistant', data.message.content);
+                    
+                    // Refresh conversations list
+                    loadConversations();
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            } catch (error) {
+                removeLoading();
+                appendMessage('assistant', `❌ Error: ${error.message}`);
+                console.error('Error:', error);
+            }
+
+            isLoading = false;
+            updateSendButtonState();
+        }
+
+        function parseAnalysisContent(content) {
+            // Check if this looks like a structured analysis response
+            // Look for the question markers that indicate analysis format
+            const analysisPatterns = /(Link Safety:|\d+\.\s+\*{0,2}(Summary|Website Purpose|Technology Stack|Integrated APIs|Target Audience|Key Features)|Additional Stats:)/;
+            
+            if (!analysisPatterns.test(content)) {
+                return null; // Not an analysis, return null
+            }
+
+            const sections = [];
+
+            // Parse Summary block explicitly (robust for 10-point multiline text)
+            const summaryMatch = content.match(/0\.\s*\*{0,2}Summary\*{0,2}:\s*([\s\S]*?)(?=(?:\r?\n)\s*1\.\s*\*{0,2}Website Purpose\*{0,2}|$)/i);
+            if (summaryMatch && summaryMatch[1]) {
+                const summaryText = summaryMatch[1]
+                    .trim()
+                    .split(/\r?\n/)
+                    .filter(line => line.trim().length > 0)
+                    .join('\n');
+
+                if (summaryText.length > 0) {
+                    sections.push({
+                        heading: '🧾 Summary',
+                        content: summaryText
+                    });
+                }
+            }
+
+            // Parse Link Safety block (if present)
+            const safetyMatch = content.match(/Link Safety:\s*([\s\S]*?)(?=(?:^|\n)\s*0\.\s+\*{0,2}Summary|(?:^|\n)\s*1\.\s+\*{0,2}Website Purpose|$)/m);
+            if (safetyMatch && safetyMatch[1]) {
+                const safetyText = safetyMatch[1]
+                    .trim()
+                    .split('\n')
+                    .filter(line => line.trim().length > 0)
+                    .join('\n');
+
+                if (safetyText.length > 0) {
+                    sections.push({
+                        heading: '🛡️ Link Safety',
+                        content: safetyText
+                    });
+                }
+            }
+            
+            // Define section patterns with more flexible regex
+            const sectionDefinitions = [
+                {
+                    name: '📌 Website Purpose',
+                    patterns: [
+                        /(?:^|\r?\n)\s*1\.\s+\*{0,2}Website Purpose\*{0,2}[:\s]*\r?\n?([\s\S]*?)(?=(?:\r?\n)\s*2\.\s+\*{0,2}Technology Stack\*{0,2}|$)/i,
+                        /Website Purpose[:\s]*\n?([\s\S]*?)(?=Technology Stack|Integrated APIs|Target Audience|Key Features|$)/i
+                    ]
+                },
+                {
+                    name: '🔧 Technology Stack',
+                    patterns: [
+                        /(?:^|\n)\s*2\.\s+\*{0,2}Technology Stack\*{0,2}[:\s]*\n?([\s\S]*?)(?=(?:^|\n)\s*3\.|$)/m,
+                        /Technology Stack[:\s]*\n?([\s\S]*?)(?=Integrated APIs|Target Audience|Key Features|$)/i
+                    ]
+                },
+                {
+                    name: '🔌 Integrated APIs',
+                    patterns: [
+                        /(?:^|\n)\s*3\.\s+\*{0,2}Integrated APIs?\*{0,2}[:\s]*\n?([\s\S]*?)(?=(?:^|\n)\s*4\.|$)/m,
+                        /Integrated APIs?[:\s]*\n?([\s\S]*?)(?=Target Audience|Key Features|$)/i
+                    ]
+                },
+                {
+                    name: '👥 Target Audience',
+                    patterns: [
+                        /(?:^|\n)\s*4\.\s+\*{0,2}Target Audience\*{0,2}[:\s]*\n?([\s\S]*?)(?=(?:^|\n)\s*5\.|$)/m,
+                        /Target Audience[:\s]*\n?([\s\S]*?)(?=Key Features|$)/i
+                    ]
+                },
+                {
+                    name: '✨ Key Features',
+                    patterns: [
+                        /(?:^|\n)\s*5\.\s+\*{0,2}Key Features\*{0,2}[:\s]*\n?([\s\S]*?)(?=(?:^|\n)\s*\d+\.|Additional Stats:|$)/m,
+                        /Key Features[:\s]*\n?([\s\S]*?)(?=Additional Stats:|$)/i
+                    ]
+                }
+            ];
+
+            sectionDefinitions.forEach(section => {
+                let match = null;
+                
+                // Try each pattern for this section
+                for (const pattern of section.patterns) {
+                    match = content.match(pattern);
+                    if (match && match[1]) break;
+                }
+                
+                if (match && match[1]) {
+                    const value = match[1]
+                        .trim()
+                        .replace(/^\*{1,2}/, '') // Remove leading asterisks
+                        .replace(/\*{1,2}$/, '') // Remove trailing asterisks
+                        .split('\n')
+                        .filter(line => line.trim().length > 0 && !line.trim().match(/^[\d\.\s]*$/))
+                        .map(line => line.replace(/^\*+/, '').replace(/\*+$/, '').trim())
+                        .join('\n');
+                    
+                    if (value.length > 0) {
+                        sections.push({
+                            heading: section.name,
+                            content: value
+                        });
+                    }
+                }
+            });
+
+            // Parse Additional Stats block (if present)
+            const statsMatch = content.match(/Additional Stats:\s*([\s\S]*)$/);
+            if (statsMatch && statsMatch[1]) {
+                const statsText = statsMatch[1]
+                    .trim()
+                    .split('\n')
+                    .filter(line => line.trim().length > 0)
+                    .join('\n');
+
+                if (statsText.length > 0) {
+                    sections.push({
+                        heading: '📊 Additional Stats',
+                        content: statsText
+                    });
+                }
+            }
+
+            return sections.length > 0 ? sections : null;
+        }
+
+        function createAnalysisHTML(sections) {
+            let html = '<div class="analysis-container">';
+            
+            sections.forEach(section => {
+                let renderedContent = escapeHtml(section.content).replace(/\n/g, '<br>');
+
+                // Render Summary as ordered list when lines are numbered (1)...10)
+                if (section.heading.includes('Summary')) {
+                    const lines = section.content
+                        .split(/\r?\n/)
+                        .map(l => l.trim())
+                        .filter(Boolean);
+
+                    const numbered = lines.every(l => /^\d+\)\s+/.test(l));
+                    if (numbered) {
+                        const items = lines
+                            .map(l => l.replace(/^\d+\)\s+/, ''))
+                            .map(l => `<li>${escapeHtml(l)}</li>`)
+                            .join('');
+                        renderedContent = `<ol class="analysis-list">${items}</ol>`;
+                    }
+                }
+
+                html += `
+                    <div class="analysis-section">
+                        <div class="analysis-heading">${section.heading}</div>
+                        <div class="analysis-content">${renderedContent}</div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            return html;
+        }
+
+        function appendMessage(role, content) {
+            const container = document.getElementById('messagesContainer');
+            
+            // Remove empty state if present
+            if (container.querySelector('.empty-state')) {
+                container.innerHTML = '';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const now = new Date();
+            const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            // Try to parse as analysis content
+            const analysisSections = parseAnalysisContent(content);
+            const contentHTML = analysisSections 
+                ? createAnalysisHTML(analysisSections)
+                : `<div class="message-content">${escapeHtml(content)}</div>`;
+            
+            messageDiv.innerHTML = `
+                <div>
+                    ${contentHTML}
+                    <div class="message-timestamp">${time}</div>
+                </div>
+            `;
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showLoading() {
+            const container = document.getElementById('messagesContainer');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message assistant';
+            loadingDiv.id = 'loadingMessage';
+            loadingDiv.innerHTML = `
+                <div class="loading">
+                    <span>LinkBot is thinking</span>
+                    <div class="loading-dots">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(loadingDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function removeLoading() {
+            const loadingMsg = document.getElementById('loadingMessage');
+            if (loadingMsg) {
+                loadingMsg.remove();
+            }
+        }
+
+        async function loadConversations() {
+            try {
+                const response = await fetch('/api/conversations');
+                const data = await response.json();
+                
+                const list = document.getElementById('conversationsList');
+                list.innerHTML = '';
+                
+                data.conversations.forEach(conv => {
+                    const item = document.createElement('div');
+                    item.className = `conversation-item ${conv.id === currentConversationId ? 'active' : ''}`;
+                    item.innerHTML = `
+                        <div class="conversation-item-text" onclick="selectConversation('${conv.id}')">${escapeHtml(conv.title)}</div>
+                        <span class="conversation-item-delete" onclick="deleteConversation('${conv.id}', event)">✕</span>
+                    `;
+                    list.appendChild(item);
+                });
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+            }
+        }
+
+        async function selectConversation(conversationId) {
+            currentConversationId = conversationId;
+            
+            try {
+                const response = await fetch(`/api/conversation/${conversationId}`);
+                const data = await response.json();
+                
+                const container = document.getElementById('messagesContainer');
+                container.innerHTML = '';
+                
+                data.messages.forEach(msg => {
+                    appendMessage(msg.role, msg.content);
+                });
+                
+                document.getElementById('chatHeader').textContent = data.title;
+                loadConversations();
+            } catch (error) {
+                console.error('Error loading conversation:', error);
+            }
+        }
+
+        async function newConversation() {
+            currentConversationId = null;
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h1>LinkBot</h1>
+                    <p>Start a new conversation</p>
+                </div>
+            `;
+            document.getElementById('chatHeader').textContent = 'Chat';
+            document.getElementById('messageInput').focus();
+            loadConversations();
+        }
+
+        async function deleteConversation(conversationId, event) {
+            event.stopPropagation();
+            
+            if (!confirm('Are you sure you want to delete this conversation?')) {
+                return;
+            }
+            
+            try {
+                await fetch(`/api/conversation/${conversationId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (currentConversationId === conversationId) {
+                    newConversation();
+                } else {
+                    loadConversations();
+                }
+            } catch (error) {
+                console.error('Error deleting conversation:', error);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Load conversations on page load
+        window.addEventListener('load', loadConversations);
+    </script>
+</body>
+</html>
